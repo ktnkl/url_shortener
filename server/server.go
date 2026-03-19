@@ -1,0 +1,68 @@
+package server
+
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+	"strings"
+	"url-shortener/database"
+	"url-shortener/server/response"
+)
+
+type CreateLinkRequestBody struct {
+	Link string `json:"link"`
+}
+
+func createLinkHandler(w http.ResponseWriter, req *http.Request) {
+	var payload CreateLinkRequestBody
+	err := json.NewDecoder(req.Body).Decode(&payload)
+	if err != nil {
+		response.InvalidJSON(w)
+		log.Println("Failed to parse JSOn")
+		return
+	}
+
+	var shortened int
+
+	shortened, err = database.CreateShortenedUrlQuery(payload.Link)
+
+	if err != nil {
+		response.InternalError(w)
+		log.Println("Error while creating row")
+		return
+	}
+
+	response.Created(w, shortened)
+
+}
+
+func getLinkHandler(w http.ResponseWriter, req *http.Request) {
+	path := req.URL.Path
+	id := strings.TrimPrefix(path, "/s/")
+
+	if id == "" {
+		response.Error(w, http.StatusNotFound, "No link provided")
+		log.Println("No short link provided")
+		return
+	}
+
+	url, err := database.GetOriginalUrlQuery(id)
+
+	if url == "" || err != nil {
+		response.Error(w, http.StatusNotFound, "Not found")
+		log.Printf("Original url for %s not found", id)
+		return
+	}
+
+	http.Redirect(w, req, url, http.StatusFound)
+}
+
+func StartServer() {
+	log.Println("Starting http server")
+	defer log.Println("http server stopped")
+
+	http.HandleFunc("POST /link/shorten", createLinkHandler)
+	http.HandleFunc("GET /s/", getLinkHandler)
+
+	http.ListenAndServe(":8080", nil)
+}
