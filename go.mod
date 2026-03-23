@@ -5,6 +5,7 @@ go 1.25.5
 require github.com/ktnkl/dotenv_validator v0.0.0-20260315151848-29d2f756a26f
 
 require (
+	github.com/go-telegram/bot v1.20.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgx/v5 v5.8.0 // indirect

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Сокращатель ссылок</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      flex-direction: column;
+      background-color: #f7fbfb;
+      font-family: Arial, Helvetica, sans-serif;
+      height: 90vh;
+      color: #5283ff;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      width: 500px;
+      text-align: center;
+    }
+
+    input {
+      width: 90%;
+      padding: 12px;
+      font-size: 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      margin: 20px 0;
+      transition: border-color 0.3s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #5283ff;
+    }
+
+    button {
+      background-color: #5283ff;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      font-size: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #3a62cc;
+    }
+
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 8px;
+      display: none;
+      word-break: break-all;
+    }
+
+    .result.success {
+      background-color: #e8f5e9;
+      color: #2e7d32;
+      border: 1px solid #81c784;
+      display: block;
+    }
+
+    .result.error {
+      background-color: #ffebee;
+      color: #c62828;
+      border: 1px solid #ef5350;
+      display: block;
+    }
+
+    .result.loading {
+      background-color: #e3f2fd;
+      color: #1976d2;
+      border: 1px solid #64b5f6;
+      display: block;
+    }
+
+    .short-url {
+      margin-top: 10px;
+      font-size: 18px;
+    }
+
+    .short-url a {
+      color: #5283ff;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .short-url a:hover {
+      text-decoration: underline;
+    }
+
+    .copy-btn {
+      background-color: #4caf50;
+      margin-left: 10px;
+      padding: 5px 15px;
+      font-size: 14px;
+    }
+
+    .copy-btn:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔗 Здесь ты можешь сократить свою ссылку</h1>
+    <p>Введи в поле ссылку для сокращения</p>
+    
+    <input 
+      type="url" 
+      id="linkInput" 
+      placeholder="https://example.com/very-long-url"
+      required
+    />
+    
+    <button id="shortenBtn">Сократить</button>
+    
+    <div id="result"></div>
+  </div>
+
+  <script>
+    const linkInput = document.getElementById('linkInput');
+    const shortenBtn = document.getElementById('shortenBtn');
+    const resultDiv = document.getElementById('result');
+
+    async function shortenLink() {
+      const link = linkInput.value.trim();
+      
+      // Валидация
+      if (!link) {
+        showResult('Пожалуйста, введите ссылку', 'error');
+        return;
+      }
+
+      // Проверка формата URL
+      try {
+        new URL(link);
+      } catch {
+        showResult('Пожалуйста, введите корректную ссылку (например: https://example.com)', 'error');
+        return;
+      }
+
+      // Показываем индикатор загрузки
+      showResult('⏳ Сокращаем ссылку...', 'loading');
+      shortenBtn.disabled = true;
+
+      try {
+        // Отправляем запрос
+        const response = await fetch('/link/shorten', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ link: link })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Ошибка при сокращении ссылки');
+        }
+
+        const data = await response.json(); // Получаем просто адрес
+        showResult(data, 'success');
+        
+      } catch (error) {
+        showResult(`${error.message}`, 'error');
+      } finally {
+        shortenBtn.disabled = false;
+      }
+    }
+
+    function showResult(message, type) {
+      resultDiv.className = `result ${type}`;
+      
+      if (type === 'success') {
+        // Если это успешный ответ, форматируем как ссылку
+        resultDiv.innerHTML = `
+          <strong>Ссылка сокращена!</strong>
+          <div class="short-url">
+            <a href="${message.data}" target="_blank">${message.data}</a>
+            <button class="copy-btn" onclick="copyToClipboard('${message.data}')">📋 Копировать</button>
+          </div>
+        `;
+      } else if (type === 'loading') {
+        resultDiv.innerHTML = message;
+      } else {
+        resultDiv.innerHTML = message;
+      }
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        // Временное уведомление о копировании
+        const originalText = shortenBtn.textContent;
+        shortenBtn.textContent = 'Скопировано!';
+        setTimeout(() => {
+          shortenBtn.textContent = originalText;
+        }, 2000);
+      }).catch(() => {
+        alert('Не удалось скопировать ссылку');
+      });
+    }
+
+    // Обработка нажатия Enter в поле ввода
+    linkInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        shortenLink();
+      }
+    });
+
+    // Обработка клика по кнопке
+    shortenBtn.addEventListener('click', shortenLink);
+  </script>
+</body>
+</html>

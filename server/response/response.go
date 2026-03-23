@@ -3,6 +3,7 @@ package response
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/http"
 )
 
@@ -13,12 +14,12 @@ type ErrorResponse struct {
 }
 
 type SuccessResponse struct {
-	Status  int         `json:"status"`
-	Message string      `json:"message,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
+	Status  int    `json:"status"`
+	Message string `json:"message,omitempty"`
+	Data    any    `json:"data,omitempty"`
 }
 
-func JSON(w http.ResponseWriter, status int, data interface{}) {
+func JSON(w http.ResponseWriter, status int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 
@@ -55,7 +56,7 @@ func IDNotFound(w http.ResponseWriter, id string) {
 	Error(w, http.StatusNotFound, errString)
 }
 
-func Success(w http.ResponseWriter, status int, data interface{}) {
+func Success(w http.ResponseWriter, status int, data any) {
 	JSON(w, status, SuccessResponse{
 		Status:  status,
 		Message: "success",
@@ -63,10 +64,24 @@ func Success(w http.ResponseWriter, status int, data interface{}) {
 	})
 }
 
-func Created(w http.ResponseWriter, data interface{}) {
+func Created(w http.ResponseWriter, data any) {
 	Success(w, http.StatusCreated, data)
 }
 
-func OK(w http.ResponseWriter, data interface{}) {
+func OK(w http.ResponseWriter, data any) {
 	Success(w, http.StatusOK, data)
+}
+
+func HTMLResponse(w http.ResponseWriter, data any, filePath string) {
+	tmpl, err := template.ParseFiles(filePath)
+	if err != nil {
+		InternalError(w)
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		InternalError(w)
+	}
 }
