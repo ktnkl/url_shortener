@@ -5,11 +5,11 @@ import (
 	"url-shortener/database"
 	"url-shortener/server"
 
-	"github.com/ktnkl/dotenv_validator/pkg/dotenv_validator"
+	_ "github.com/ktnkl/dotenv_validator/pkg/dotenv_validator"
 )
 
 func main() {
-	dotenv_validator.ValidateEnv([]string{"DSN", "TG_BOT_API_KEY", "HOST_NAME"}, ".env")
+	// dotenv_validator.ValidateEnv([]string{"DSN", "TG_BOT_API_KEY", "HOST_NAME"}, ".env")
 
 	database.Connect()
 

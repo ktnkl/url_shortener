@@ -1,0 +1,33 @@
+services:
+  db:
+    ports:
+      - "15432:5432"
+    image: postgres:16
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      # Заполняем пустую базу
+      - ./init.scripts:/docker-entrypoint-initdb.d:ro
+      - postgres_data:/var/lib/postgresql/data
+    # для создания базы и юзера,
+    # альтернатива - запускать скрипт с полной инициализацией базы
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+  web:
+    depends_on:
+      db:
+        condition: service_healthy  # ждет healthcheck
+    build: .
+    ports:
+      - "8080:8080"
+    environment: # докер читает из файла, в приложение идут из окружения
+      - DSN=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      - TG_BOT_API_KEY=${TG_BOT_API_KEY}
+      - HOST_NAME=${HOST_NAME}
+volumes:
+  postgres_data:
